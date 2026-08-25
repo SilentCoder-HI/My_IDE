@@ -22,9 +22,18 @@ class SideBar(QWidget):
         index = self.tree.indexAt(position)
         target_dir = self.fs_model.rootPath()
         if index.isValid():
-            file_path = self.fs_model.filePath(index)
-            is_dir = os.path.isdir(file_path)
-            target_dir = file_path if is_dir else os.path.dirname(file_path)
+            # User clicked directly on a File or Folder
+            item_name = self.fs_model.fileName(index)
+            full_path = self.fs_model.filePath(index)
+            is_folder = self.fs_model.isDir(index)
+
+            print(f"Clicked on Item: {item_name}")
+            print(f"Path: {full_path}")
+            print(f"Is Folder: {is_folder}")
+
+        else:
+            root_path = self.fs_model.rootPath()
+            print(f"Right-clicked empty space. Root folder is: {root_path}")
 
         menu = QMenu(self)
         new_file_action = menu.addAction("New File")
@@ -47,9 +56,26 @@ class SideBar(QWidget):
         reveal_in_explorer_action = menu.addAction("Reveal in File Explorer")
         open_in_terminal_action = menu.addAction("Open in Integrated Terminal")
 
+
+
         # Map position to screen coordinates correctly
         global_pos = self.tree.viewport().mapToGlobal(position)
         selected_action = menu.exec(global_pos)
+
+          # FIXED: Removed () from the action variable
+        if selected_action == new_file_action:
+            print("User clicked 'New File'!")
+
+
+            # Put your code here to create a new file
+            
+        elif selected_action == new_folder_action:
+            print("User clicked 'New Folder'!")
+            
+        elif selected_action == delete_action:
+            print("User clicked 'Delete'!")
+        elif selected_action == rename_action:
+            print("Your rename this file")
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
@@ -62,7 +88,9 @@ class SideBar(QWidget):
 
         self.fs_model = QFileSystemModel()
         self.icon_provider = MaterialIconProvider()
+
         self.fs_model.setIconProvider(self.icon_provider)
+        self.fs_model.setNameFilterDisables(False)
         self.fs_model.setRootPath("")
 
         self.tree = QTreeView()
@@ -74,8 +102,6 @@ class SideBar(QWidget):
         # Context menu setup
         self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tree.customContextMenuRequested.connect(self.show_tree_context_menu)
-        self.tree.doubleClicked.connect(self._on_tree_double_click)
-
         layout.addWidget(self.tree)
 
         open_folder_btn = QPushButton("Open Folder")
