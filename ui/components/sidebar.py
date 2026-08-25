@@ -1,6 +1,6 @@
 import os
 import shutil
-from PySide6.QtCore import Signal, Qt
+from PySide6.QtCore import Signal, Qt, QTimer
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QTreeView, 
     QFileSystemModel, QPushButton, QMenu, QMessageBox, QInputDialog
@@ -18,6 +18,51 @@ class SideBar(QWidget):
         self.setObjectName("SideBar")
         self._setup_ui()
 
+    def _create_new_file(self, target_dir):
+        """Create a new file and immediately put it into inline rename mode."""
+
+        
+
+        # Temporary filename
+        file_path = os.path.join(target_dir, "untitled")
+
+        # Avoid overwriting an existing file
+        counter = 1
+        while os.path.exists(file_path):
+            file_path = os.path.join(target_dir, f"untitled{counter}")
+            counter += 1
+
+        try:
+            # Create the actual file
+            open(file_path, "w").close()
+
+        except OSError as e:
+            QMessageBox.critical(
+                self,
+                "New File",
+                f"Could not create file:\n{e}"
+            )
+            return
+
+        # Ask QFileSystemModel for the new file's index
+        file_index = self.fs_model.index(file_path)
+
+        if not file_index.isValid():
+            return
+
+        # Make sure the parent folder is expanded
+        parent_index = file_index.parent()
+        self.tree.expand(parent_index)
+
+        # Select the new file
+        self.tree.setCurrentIndex(file_index)
+
+        # Start inline editing after the model has updated
+        QTimer.singleShot(
+            100,
+            lambda: self.tree.edit(file_index)
+        )
+
     def show_tree_context_menu(self, position):
         index = self.tree.indexAt(position)
         target_dir = self.fs_model.rootPath()
@@ -30,6 +75,8 @@ class SideBar(QWidget):
             print(f"Clicked on Item: {item_name}")
             print(f"Path: {full_path}")
             print(f"Is Folder: {is_folder}")
+
+
 
         else:
             root_path = self.fs_model.rootPath()
@@ -64,7 +111,15 @@ class SideBar(QWidget):
 
           # FIXED: Removed () from the action variable
         if selected_action == new_file_action:
-            print("User clicked 'New File'!")
+            if index.isValid():
+                full_path = self.fs_model.filePath(index)
+                if self.fs_model.isDir(index):
+                    target_dir = full_path
+                else:
+                    target_dir = os.path.dirname(full_path)
+            else:
+                target_dir = self.fs_model.rootPath()
+            self._create_new_file(target_dir)
 
 
             # Put your code here to create a new file
