@@ -19,45 +19,39 @@ class SideBar(QWidget):
         self._setup_ui()
 
     def _create_new_file(self, target_dir):
-        """Create a new file and immediately put it into inline rename mode."""
-
-        
-
-        # Temporary filename
+        """Create a new file and immediately put it into modern inline rename mode."""
+        # Check if basic untitled file already exists to avoid overwriting
         file_path = os.path.join(target_dir, "untitled")
-
-        # Avoid overwriting an existing file
         counter = 1
         while os.path.exists(file_path):
-            file_path = os.path.join(target_dir, f"untitled{counter}")
+            file_path = os.path.join(target_dir, f"untitled_{counter}")
             counter += 1
 
         try:
-            # Create the actual file
+            # 1. Create a blank placeholder file directly on disk
             open(file_path, "w").close()
-
         except OSError as e:
             QMessageBox.critical(
                 self,
-                "New File",
+                "New File Error",
                 f"Could not create file:\n{e}"
             )
             return
 
-        # Ask QFileSystemModel for the new file's index
+        # 2. Get the index of our newly generated placeholder file
         file_index = self.fs_model.index(file_path)
 
         if not file_index.isValid():
             return
 
-        # Make sure the parent folder is expanded
+        # 3. Ensure the target workspace folder expands open
         parent_index = file_index.parent()
         self.tree.expand(parent_index)
 
-        # Select the new file
+        # 4. Set the cursor focus on our placeholder item
         self.tree.setCurrentIndex(file_index)
 
-        # Start inline editing after the model has updated
+        # 5. Small timer gap to let the OS register the file, then open the text box in-place
         QTimer.singleShot(
             100,
             lambda: self.tree.edit(file_index)
